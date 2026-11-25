@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>集大成</title>
+<style>
+  :root {
+    /* =====================================================
+       ★ 配色區：只要改這裡的色碼（# 開頭那串）就好 ★
+       ===================================================== */
+    --page-bg: #e3f4d1;          /* 整個網頁的背景色 */
+    --text: #5a3b1e;             /* 網頁上的文字顏色（分數、下一個） */
+
+    --box-bg: #a6d279;           /* 遊戲框內的背景色（沒有背景圖、也沒有車廂圖時才看得到） */
+    --box-border: #52841f;       /* 遊戲框的框線顏色 */
+    --next-bg: #fff8ea;          /* 右上角「下一個」小框的背景色 */
+    --next-border: #8b5e3c;      /* 右上角「下一個」小框的框線顏色 */
+
+    --dim: rgba(0,0,0,.65);      /* 跳出畫面時，後方的半透明遮罩 */
+    --panel-bg: #d5e383;         /* 開始／結束／勝利畫面的底色 */
+    --panel-border: #7f8f22;     /* 開始／結束／勝利畫面的框線 */
+    --panel-text: #5a3b1e;       /* 開始／結束／勝利畫面的文字顏色 */
+    --divider: #52841F;          /* 介紹頁的分隔線 */
+
+    /* 介紹列表中，每個元素的小卡片 */
+    --tile-bg: #f0f9b4;          /* 小卡片的底色 */
+    --tile-border: #7f8f22;      /* 小卡片的框線 */
+
+    /* 「特色介紹／地方‧品牌故事」的切換標籤 */
+    --tab-bg: #f0f9b4;           /* 未選取時的底色 */
+    --tab-text: #52841F;         /* 未選取時的文字顏色 */
+    --tab-border: #7f8f22;       /* 標籤框線 */
+    --tab-active-bg: #52841F;    /* 被選取時的底色 */
+    --tab-active-text: #ffffff;  /* 被選取時的文字顏色 */
+
+    /* 成績卡（玩家截圖回傳的那張卡片）*/
+    --card-bg: #f0f9b4;          /* 成績卡底色 */
+    --card-border: #52841F;      /* 成績卡框線 */
+    --card-text: #3b5a14;        /* 成績卡文字 */
+
+    /* 按鈕：底色 / 文字 / 框線 */
+    --main-bg: #f0f9b4;     --main-text: #52841F;  --main-border: #7f8f22;   /* 開始遊戲／再玩一次／繼續遊玩 */
+    --intro-bg: #f0f9b4;    --intro-text: #52841F; --intro-border: #7f8f22;  /* 查看介紹 */
+    --feedback-bg: #f0f9b4; --feedback-text: #52841F; --feedback-border: #7f8f22;  /* 旅程回饋 */
+    --back-bg: #f0f9b4;     --back-text: #52841F;  --back-border: #7f8f22;   /* 各頁的「返回」 */
+    --share-bg: #f0f9b4;    --share-text: #52841F; --share-border: #7f8f22;  /* 分享、排行榜、儲存、複製 */
+    --line-bg: #06c755;     --line-text: #ffffff;  --line-border: #05a547;   /* 前往 LINE@ 回傳截圖 */
+  }
+
+  body { margin:0; background:var(--page-bg); color:var(--text); font-family:sans-serif; display:flex; flex-direction:column;
+         align-items:center; touch-action:none; user-select:none; -webkit-user-select:none;
+         background-size:cover; background-position:center; background-attachment:fixed; }
+  #hud { width:360px; display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:18px; color:var(--text); }
+  #hud .next { display:flex; align-items:center; gap:6px; }
+  #game { width:360px; height:auto; background:var(--box-bg); border:3px solid var(--box-border); border-radius:8px; }
+  #nextCanvas { width:64px; height:64px; background:var(--next-bg); border:3px solid var(--next-border); border-radius:8px; }
+
+  /* ===== 開始 / 結束 / 過關 頁面 ===== */
+  #overlay { position:fixed; inset:0; background:var(--dim); display:none; align-items:center;
+             justify-content:center; z-index:10; padding:12px; box-sizing:border-box; }
+  #overlay.show { display:flex; }
+  .panel { background:var(--panel-bg); border:4px solid var(--panel-border); border-radius:16px; padding:22px; width:min(94vw, 460px);
+           max-height:92vh; overflow:auto; text-align:center; color:var(--panel-text); touch-action:pan-y; box-sizing:border-box;
+           user-select:text; -webkit-user-select:text; }
+  .panel h1 { margin:0 0 6px; font-size:clamp(22px, 7vw, 30px); letter-spacing:1px; overflow-wrap:anywhere; }
+  .panel h2 { margin:0 0 12px; font-size:24px; }
+  .panel h3 { margin:14px 0 6px; font-size:17px; text-align:left; }
+  .panel .sub { margin:0 0 10px; font-size:15px; opacity:.85; }
+  .panel p, .panel ol { text-align:left; line-height:1.7; font-size:15px; margin:4px 0; white-space:pre-line; }
+  .panel ol { padding-left:22px; white-space:normal; }
+  .btn { display:block; width:100%; margin:10px 0 0; padding:13px; font-size:18px; border-radius:10px;
+         border:3px solid transparent; cursor:pointer; font-family:inherit; }
+  .btn[disabled] { opacity:.55; cursor:default; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .row2 .btn { margin-top:10px; font-size:16px; padding:11px 6px; }
+  #btnStart, #btnMain       { background:var(--main-bg);     color:var(--main-text);     border-color:var(--main-border); }
+  #btnIntro                 { background:var(--intro-bg);    color:var(--intro-text);    border-color:var(--intro-border); }
+  #btnFeedback              { background:var(--feedback-bg); color:var(--feedback-text); border-color:var(--feedback-border); }
+  #btnBack, #btnDetailBack, #btnShareBack, #btnRankBack { background:var(--back-bg); color:var(--back-text); border-color:var(--back-border); }
+  #btnShare, #btnRank, #btnStartShare, #btnSave, .share-grid .btn
+                            { background:var(--share-bg);    color:var(--share-text);    border-color:var(--share-border); }
+  #btnLine                  { background:var(--line-bg);     color:var(--line-text);     border-color:var(--line-border); font-weight:bold; }
+  /* 開始頁：排緊一點，盡量一屏放得下（不用上下滑） */
+  #panel:has(#viewStart:not(.hidden)) { padding:14px 16px; }
+  #viewStart h1 { font-size:clamp(20px, 6vw, 26px); margin:0 0 4px; }
+  #viewStart h3 { margin:8px 0 2px; font-size:15px; }
+  #viewStart p, #viewStart ol { font-size:13px; line-height:1.5; margin:2px 0; }
+  #viewStart ol { padding-left:18px; }
+  #viewStart .field { margin:8px 0 0; font-size:14px; }
+  #viewStart .btn { margin-top:8px; padding:9px; font-size:16px; }
+  .hidden { display:none !important; }
+
+  /* 暱稱輸入 */
+  .field { text-align:left; margin:10px 0 0; font-size:15px; }
+  .field input { width:100%; box-sizing:border-box; margin-top:4px; padding:10px; font-size:17px; border-radius:8px;
+                 border:2px solid var(--panel-border); background:#fff; color:#333; font-family:inherit; }
+
+  /* ===== 成績卡 ===== */
+  .card { background:var(--card-bg); border:3px solid var(--card-border); border-radius:14px; padding:14px 12px; margin:10px 0 2px; color:var(--card-text); }
+  .card .c-title { font-weight:bold; font-size:17px; }
+  .card .c-nick { font-size:20px; margin-top:8px; overflow-wrap:anywhere; }          /* 暱稱 < 上方 GAME OVER 標題 < 分數 */
+  .card .c-score { font-size:54px; font-weight:bold; line-height:1.15; margin:2px 0 6px; }
+  .card .c-small { font-size:14px; opacity:.9; line-height:1.6; }
+  .card .c-note { margin-top:8px; padding-top:8px; border-top:2px dashed var(--card-border); font-size:14px; line-height:1.6; white-space:pre-line; }
+
+  /* ===== 分享頁 ===== */
+  .share-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .share-grid .btn { margin-top:0; font-size:16px; padding:12px 6px; }
+  .share-grid .btn:last-child { grid-column:1 / -1; }
+  .hint { font-size:13px !important; opacity:.85; text-align:center !important; }
+  #toast { position:fixed; left:50%; bottom:8%; transform:translateX(-50%); background:rgba(0,0,0,.78); color:#fff; padding:10px 16px;
+           border-radius:20px; font-size:15px; z-index:30; opacity:0; pointer-events:none; transition:opacity .2s; max-width:90vw; text-align:center; }
+  #toast.show { opacity:1; }
+
+  /* ===== 排行榜 ===== */
+  .rank-row { display:grid; grid-template-columns:34px 1fr auto; gap:8px; align-items:center; text-align:left;
+              padding:8px 4px; border-bottom:1px solid var(--divider); font-size:15px; }
+  .rank-row.me { background:rgba(255,255,255,.55); font-weight:bold; border-radius:8px; }
+  .rank-row .t { font-size:12px; opacity:.75; font-weight:normal; }
+  .empty { padding:14px 0; opacity:.8; }
+
+  /* ===== 介紹：列表（小卡片）===== */
+  #introList { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:6px; }
+  .group-title { grid-column:1 / -1; text-align:left; font-weight:bold; font-size:16px; padding:6px 2px 2px;
+                 border-bottom:2px solid var(--divider); }
+  .tile { background:var(--tile-bg); border:2px solid var(--tile-border); border-radius:12px; padding:10px 4px;
+          cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;
+          color:var(--panel-text); font-family:inherit; font-size:13px; line-height:1.3; }
+  .tile .st { font-size:11px; opacity:.75; }
+  .thumb { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+           color:#fff; font-weight:bold; overflow:hidden; }
+  .thumb img { width:100%; height:100%; object-fit:contain; }
+  .thumb.big { width:110px; height:110px; margin:0 auto 8px; font-size:28px; }
+
+  /* ===== 介紹：單一元素的詳細頁 ===== */
+  .detail-head h2 { margin:0 0 4px; }
+  .detail-head .station { font-size:14px; opacity:.85; margin-bottom:10px; }
+  .tabs { display:flex; gap:6px; }
+  .tab { flex:1; padding:10px 4px; font-size:15px; border-radius:10px 10px 0 0; cursor:pointer; font-family:inherit;
+         border:2px solid var(--tab-border); background:var(--tab-bg); color:var(--tab-text); }
+  .tab.active { background:var(--tab-active-bg); color:var(--tab-active-text); }
+  .detail-text { text-align:left; white-space:pre-line; line-height:1.75; font-size:15px;
+                 padding:12px 2px 8px; border-top:2px solid var(--divider); }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div><span id="tScore"></span><b id="score">0</b><br><span id="tBest"></span><b id="best">0</b></div>
+  <div class="next"><span id="tNext"></span><canvas id="nextCanvas" width="80" height="80"></canvas></div>
+</div>
+<canvas id="game" width="400" height="600"></canvas>
+<div id="toast"></div>
+
+<div id="overlay">
+  <div class="panel" id="panel">
+
+    <!-- 開始頁 -->
+    <div id="viewStart">
+      <h1 id="startTitle"></h1>
+      <div class="sub hidden" id="startSub"></div>
+      <h3 id="introHeading"></h3>
+      <p id="startIntro"></p>
+      <h3 id="howTitle"></h3>
+      <ol id="howList"></ol>
+      <h3 id="rewardTitle"></h3>
+      <p id="startReward"></p>
+      <p id="startDeadline" class="hidden"></p>
+      <div class="field">
+        <label for="nickInput" id="nickLabel"></label>
+        <input id="nickInput" type="text" maxlength="12" autocomplete="off">
+      </div>
+      <button class="btn" id="btnStart" disabled></button>
+      <button class="btn" id="btnStartShare"></button>
+    </div>
+
+    <!-- 結束 / 過關 -->
+    <div id="viewEnd" class="hidden">
+      <h1 id="endTitle"></h1>
+      <div class="card" id="card">
+        <div class="c-title" id="cardTitle"></div>
+        <div class="c-nick" id="cardNick"></div>
+        <div class="c-score" id="cardScore"></div>
+        <div class="c-small" id="cardTime"></div>
+        <div class="c-small hidden" id="cardDeadline"></div>
+        <div class="c-small hidden" id="cardCode"></div>
+        <div class="c-note" id="cardNote"></div>
+      </div>
+      <button class="btn" id="btnMain"></button>
+      <button class="btn" id="btnLine"></button>
+      <div class="row2">
+        <button class="btn" id="btnIntro"></button>
+        <button class="btn" id="btnShare"></button>
+      </div>
+      <div class="row2 hidden" id="extraRow">
+        <button class="btn hidden" id="btnRank"></button>
+        <button class="btn hidden" id="btnFeedback"></button>
+      </div>
+    </div>
+
+    <!-- 分享 -->
+    <div id="viewShare" class="hidden">
+      <h2 id="shareTitle"></h2>
+      <div id="shareSaveBox">
+        <button class="btn" id="btnSave"></button>
+        <p class="hint" id="saveHint"></p>
+      </div>
+      <h3 id="shareFriendTitle"></h3>
+      <div class="share-grid">
+        <button class="btn" id="btnShIG"></button>
+        <button class="btn" id="btnShThreads"></button>
+        <button class="btn" id="btnShFB"></button>
+        <button class="btn" id="btnShLine"></button>
+        <button class="btn" id="btnShCopy"></button>
+      </div>
+      <button class="btn" id="btnShareBack"></button>
+    </div>
+
+    <!-- 本機排行榜 -->
+    <div id="viewRank" class="hidden">
+      <h2 id="rankTitle"></h2>
+      <p id="rankNote"></p>
+      <div id="rankList"></div>
+      <button class="btn" id="btnRankBack"></button>
+    </div>
+
+    <!-- 介紹：元素列表 -->
+    <div id="viewIntro" class="hidden">
+      <h2 id="introTitle"></h2>
+      <div id="introList"></div>
+      <button class="btn" id="btnBack"></button>
+    </div>
+
+    <!-- 介紹：單一元素的詳細頁 -->
+    <div id="viewDetail" class="hidden">
+      <div class="detail-head">
+        <div id="detailThumb"></div>
+        <h2 id="detailName"></h2>
+        <div class="station" id="detailStation"></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tabFeature"></button>
+        <button class="tab" id="tabStory"></button>
+      </div>
+      <div class="detail-text" id="detailText"></div>
+      <button class="btn" id="btnDetailBack"></button>
+    </div>
+
+  </div>
+</div>
+
+<!-- 物理引擎：優先讀取同資料夾的 matter.min.js（可離線）；找不到才從網路載入 -->
+<script src="matter.min.js"></script>
+<script>
+  if (!window.Matter) {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"><\/script>');
+  }
+</script>
+<script>
+/* =====================================================
+   ★ 你們最常改的設定都在這一區 ★
+   ===================================================== */
+
+// ===== 文案：畫面上所有固定的文字 =====
+const TEXT = {
+  title: '集大成',               // 瀏覽器分頁上的標題
+  score: '分數：',
+  best: '最高：',
+  next: 'Next',
+  gameOver: 'GAME OVER',         // 失敗畫面的大標題
+  win: 'CONGRATULATIONS',        // 勝利畫面的大標題
+  again: '再玩一次',
+  keepPlaying: '繼續遊玩',
+  intro: '查看介紹',
+  feedback: '旅程回饋',
+  introTitle: '角色介紹',
+  tabFeature: '特色介紹',        // 詳細頁上的第一個標籤
+  tabStory: '地方／品牌故事',    // 詳細頁上的第二個標籤
+  back: '返回',
+  backToList: '返回列表',
+  noFeedbackLink: '回饋表單的連結還沒設定。',
+
+  // --- 開始頁 ---
+  startTitle: '城鄉尋味號・集大成',          // 開始頁最上面的大標題
+  startSub: '',                  // 大標題下方的小字（不要的話留空）
+  introHeading: '',              // 不需要小標題就留空
+  startIntro:                    // 前言／城鄉尋味號簡介（換行請直接按 Enter）
+`以鐵道為媒介，串聯地方農產、飲食、工藝、生態與文化，讓旅客透過旅行認識地方特色。
+透過 12 個代表物及地方品牌故事，將不同產業與文化串聯起來，讓鐵道旅程成為認識地方、支持在地產業的文化體驗。`,
+  howTitle: '【遊玩方式】',
+  howTo: [                       // 遊玩方式，一行一條；{final} 會自動換成最後一級元素的名稱
+    '以手指或滑鼠選擇位置，放開即可投下元素。兩個相同的元素碰在一起，會合成為下一級的元素。',
+    '合成出「{final}」即為過關，過關後也可以繼續挑戰更高分；元素堆過紅線就會結束遊戲。',
+  ],
+  rewardTitle: '【活動獎勵】',
+  startReward:                   // {top} = 前幾名，{oa} = LINE@ 名稱
+    '積分排行榜前 {top} 名可獲得獎勵，遊戲結束後請將「成績畫面」截圖，傳送至「{oa}」官方 LINE@。',
+  deadline: '排行統計至 {deadline}',   // 只有在下方 RANK_DEADLINE 有填時才會顯示
+  nickLabel: '暱稱',
+  nickPlaceholder: '請輸入暱稱',
+  nickDefault: '玩家',            // 沒填暱稱時使用
+  loading: '載入中…',
+  startBtn: '開始遊戲',
+  shareGame: '分享遊戲',
+
+  // --- 結束／勝利：成績卡 ---
+  cardTitle: '城鄉尋味號・集大成',   // 成績卡最上方的標題
+  cardCode: '驗證碼：',
+  cardNote:                      // 成績卡最下方的說明，截圖時會一起被截進去（換行請直接按 Enter）
+`積分排行榜前 {top} 名可獲得實質獎勵！
+請截圖此畫面，傳送至「{oa}」官方 LINE@。`,
+  lineBtn: '前往「{oa}」回傳分數',
+  shareBtn: '分享',
+  rankBtn: '排行榜',
+  noLineLink: '官方 LINE@ 的連結還沒設定。',
+
+  // --- 分享頁 ---
+  shareTitle: '分享',
+  saveBtn: '儲存成績圖',
+  saveHint: '儲存後，請將成績圖傳送至「{oa}」官方 LINE@。',
+  shareFriendTitle: '分享給朋友',
+  shIG: 'Instagram',
+  shThreads: 'Threads',
+  shFB: 'Facebook',
+  shLINE: 'LINE',
+  shCopy: '複製連結',
+  copied: '已複製連結！',
+  igHint: '已複製連結，請到 Instagram 貼上分享。',
+  copyFail: '無法自動複製，請長按下方文字自行複製：',
+  saveFail: '無法儲存圖片，請直接截圖成績畫面。',
+  shareText: '我在「城鄉尋味號」集大成遊戲拿到 {score} 分，一起來挑戰！',   // 分享文字；{score} 會換成分數
+  shareTextNoScore: '一起來玩「城鄉尋味號」集大成遊戲！',                  // 還沒玩時的分享文字
+
+  // --- 排行榜（預設不顯示，見 SHOW_RANK_BTN）---
+  rankTitle: '排行榜 Top {top}',
+  rankNote:
+    '這裡顯示的是「這支手機／這台電腦」上的最高紀錄。全體玩家的排名，以「{oa}」官方 LINE@ 收到的成績截圖為準。',
+  rankEmpty: '還沒有紀錄，先來玩一場吧！',
+  rankPts: '分',
+};
+
+// ===== 活動／獎勵設定 =====
+const REWARD_TOP_N = 15;                  // 實質獎勵：積分排行榜前幾名
+const LINE_OA_NAME = '城鄉島遊';           // 官方 LINE@ 名稱（會顯示在文案裡）
+const LINE_OA_URL  = 'https://line.me/R/ti/p/@664pnqdf';                  // 官方 LINE@ 連結（例如 https://lin.ee/xxxxxxx ，放在兩個單引號中間）。留空會提示尚未設定
+const SHARE_URL    = '';                  // 分享出去的遊戲網址。留空 = 自動使用目前的網址（正式上線後可以留空）
+const RANK_DEADLINE = '';                 // 排行截止日（例如 '2026/12/31'）。有填的話，開始頁與成績卡會顯示「排行統計至 …」；留空 = 不顯示
+const SHOW_CODE = false;                  // 成績卡是否顯示驗證碼（預設不顯示）
+const SHOW_RANK_BTN = false;              // 結束畫面是否顯示「排行榜」按鈕（本機紀錄，預設不顯示）
+const SHOW_FEEDBACK_BTN = false;          // 結束畫面是否顯示「旅程回饋」按鈕（改由 LINE@ 自動回覆收集，預設不顯示）
+
+// 「旅程回饋」按鈕要開啟的網址（貼上 Google 表單的連結，放在兩個單引號中間）。留空的話按下去會提示尚未設定。
+const FEEDBACK_URL = 'https://forms.gle/C6snQhpWQUDHwJdV8';
+// （你們之前還貼過另一個連結：https://forms.gle/ZWuyAG5Fbfu1cWih9 ，如果它是另一份表單、之後要用，可以從這裡複製。）
+
+// ===== 介紹頁的排列：依「列車路線」分站點 =====
+// 想依列車路線排序並標示站點的話：
+//   1. 在 STATIONS 依「列車行駛順序」寫下站名，例如 ['二水', '濁水', '源泉', '水里', '車埕']
+//   2. 在每個元素裡加上 station: '站名'（站名要跟 STATIONS 裡寫的一模一樣）
+// 介紹列表就會依站點分組、依路線排序，並在每組上方標示站名。
+// STATIONS 留空 [] = 維持原本的樣子（依元素大小順序排列，若元素有寫 station，會把站名小字顯示在名稱上方）。
+// ※ 這只影響「介紹頁」。遊戲裡元素的合成順序（由小到大）不變。
+const STATIONS = [];
+
+// ===== 元素清單：從最小排到最大（最後一個就是「最後一級」，合成出它就過關）=====
+// name    = 名稱
+// feature = 「特色介紹」的內容
+// story   = 「地方／品牌故事」的內容
+//           ※ 文字很長或想分段時，請用鍵盤左上角的反引號 ` 把文字包起來（不要用單引號），這樣可以直接換行。
+// r = 大小（愈大的元素愈大顆）, color = 沒有圖片時的備用顏色（合併特效也會用這個顏色，建議設成接近圖片的主色）
+// img = 你們自己畫的圖片路徑
+// imgScale（選填）= 只調整這一個元素的大小倍率（會連碰撞形狀一起放大縮小）
+// station（選填）= 這個元素所屬的站點
+// extras（選填）= 同一個元素底下「再多放幾個介紹頁」，不會多出一個等級，所以不影響合成。
+//           extras 裡的 img 不寫，就沿用這個元素的圖片；station 不寫，就沿用這個元素的站點。
+// hull（選填）= 事先算好的碰撞外形（之後可由我幫你們算好貼進來，讓不連網、直接點開檔案時也能貼合圖片）
+const FRUITS = [
+  { name: '黃豆',  feature: `黃豆是臺灣傳統飲食的重要食材，可製作豆漿、豆腐、豆花等食品，從日常飲食認識農業生產。`,  story: `田野勤學從國產黃豆種植出發，創辦人返鄉投入農業，希望讓更多人認識國產黃豆，並透過體驗了解食物從土地到餐桌的過程。`,  r: 15,  color: '#e63946', hull: [[0.3275,0.43],[0.3475,0.3725],[0.3775,0.335],[0.435,0.31],[0.5025,0.315],[0.6425,0.3875],[0.695,0.4375],[0.715,0.495],[0.715,0.545],[0.6725,0.615],[0.615,0.6425],[0.5,0.635],[0.4025,0.595],[0.3375,0.52]], img: 'images/1.png'  },
+  { name: '火龍果',  feature: `火龍果色彩鮮豔、果肉香甜，是臺灣具代表性的水果，也能透過加工創造多元產品。`,  story: `畯富農場長期投入火龍果種植，運用鴨果共生、草生栽培等方式，讓鴨子協助果園除蟲，呈現農業與自然共生的特色。`,  r: 20,  color: '#f4845f', hull: [[0.245,0.6125],[0.345,0.3275],[0.415,0.2],[0.49,0.1475],[0.5325,0.1625],[0.6125,0.265],[0.76,0.52],[0.75,0.68],[0.715,0.74],[0.6425,0.78],[0.54,0.8175],[0.415,0.8125],[0.3475,0.785],[0.2475,0.635]], img: 'images/2.png'  },
+  { name: '籠仔篙',  feature: `籠仔蒿（láng-á-ko）是彰化一帶傳統的水利工程器具，利用竹、木、藤等天然材料製作的大型竹籠，用來攔水、導水及護岸 。`,  story: `源泉故事屋的前身是陪伴源泉村居民近半世紀的「源泉文具行」，承載過去記憶，並以在地農產連結土地。`,  r: 29,  color: '#f9c74f',hull: [[0.2675,0.785],[0.4025,0.1475],[0.4225,0.13],[0.4675,0.1275],[0.5525,0.1425],[0.565,0.16],[0.69,0.7875],[0.6775,0.8175],[0.6125,0.835],[0.54,0.845],[0.4325,0.845],[0.3825,0.8425],[0.3375,0.835],[0.28,0.8175]] , img: 'images/3.png'  },
+  { name: '左手香',  feature: `左手香是常見的草本植物，具有特殊香氣，常被運用於生活清潔及草本產品。`,  story: `本草自然以在地草本文化為基礎，將左手香融入手工皂及生活用品，讓傳統植物智慧透過現代產品延續。`,  r: 33,  color: '#9b5de5',hull: [[0.2225,0.2725],[0.27,0.25],[0.5325,0.1475],[0.555,0.15],[0.5775,0.17],[0.7575,0.4],[0.76,0.4225],[0.72,0.63],[0.7025,0.655],[0.51,0.805],[0.4525,0.8075],[0.2675,0.67],[0.2175,0.585],[0.205,0.31]] , img: 'images/4.png'  },
+ { name: '山蕉',  feature: `山蕉是集集重要的地方農產，果肉綿密、香氣濃郁，也能加工製成各式特色食品。`,  story: `集元果來自集集蕉農家族，延續地方山蕉產業與昔日金蕉年代的記憶，透過香蕉加工與全株利用，開發更多元的產品。`,  imgScale: 2.0, r: 37,  color: '#f8961e', hull: [[0.2575,0.585],[0.3375,0.3125],[0.465,0.2025],[0.5125,0.2225],[0.61,0.355],[0.6625,0.4375],[0.6875,0.505],[0.685,0.5925],[0.66,0.6525],[0.6025,0.7275],[0.5575,0.76],[0.465,0.7625],[0.2925,0.6875],[0.255,0.6525]], img: 'images/5.png'  },
+  { name: '竹子',  feature: `二水的竹子，是一段治水與農業的歷史，竹子既是當地的特色，也是竹蠟燭等各種製品與禮品的原料。`,  story: `溪部好呆庄結合森林、溪流及戶外野炊體驗，讓旅客親手體驗各種竹子製品，從飲食感受自然環境與山林生活。`,  r: 48,  color: '#ef476f', hull: [[0.23,0.3325],[0.275,0.2925],[0.4875,0.22],[0.7075,0.2875],[0.765,0.3325],[0.7775,0.665],[0.7675,0.7625],[0.725,0.7925],[0.625,0.8175],[0.445,0.825],[0.3,0.8025],[0.2525,0.785],[0.23,0.7575],[0.22,0.6775]], img: 'images/6.png'  },
+  { name: '採茶竹簍',  feature: `採茶是臺灣傳統農村的重要產業文化，竹甕則是具有地方特色的生活器物，結合竹材的自然質感與傳統容器文化，呈現農村生活與地方工藝的特色。`,  story: `透過採茶體驗，讓旅客走進茶園，認識茶葉生長環境及茶農日常；同時以竹甕作為特色意象，連結地方生活記憶與傳統器物文化，感受茶產業與在地文化的魅力。`,  r: 54,  color: '#43aa8b',hull: [[0.215,0.5925],[0.2475,0.32],[0.29,0.2675],[0.435,0.2225],[0.58,0.2325],[0.6575,0.2775],[0.7725,0.43],[0.78,0.4675],[0.7475,0.78],[0.735,0.795],[0.4,0.8775],[0.38,0.8775],[0.235,0.7875],[0.2125,0.7225]] , img: 'images/7.png'  },
+  { name: '木柴堆',  feature: `竹筒飯利用天然竹筒盛裝米飯，以炭火或野炊方式烹煮，帶有竹子的清香，呈現山林飲食文化。`,  story: `溪部好呆庄結合森林、溪流及戶外野炊體驗，讓旅客親手製作竹筒飯，從飲食感受自然環境與山林生活。`,  r: 58,  color: '#e9c46a',hull: [[0.175,0.4925],[0.28,0.3425],[0.36,0.325],[0.685,0.2675],[0.7525,0.3025],[0.79,0.3575],[0.83,0.505],[0.815,0.6025],[0.775,0.6525],[0.7425,0.665],[0.475,0.7275],[0.3225,0.695],[0.1875,0.6325],[0.1625,0.565]]
+ , img: 'images/8.png'  },
+  { name: '陶甕',  feature: `陶甕是傳統農村生活常見器具，可用於儲存、醃漬及盛裝食物，展現陶土與火的工藝智慧。`,  story: `水里蛇窯創立於1927年，經過四代傳承，從日常陶器製作發展為陶藝文化園區，延續傳統製陶技術。`,  r: 62,  color: '#90be6d',hull: [[0.2425,0.3675],[0.2875,0.3075],[0.38,0.23],[0.44,0.2175],[0.6,0.2325],[0.7125,0.33],[0.7425,0.4],[0.7425,0.4675],[0.71,0.575],[0.6025,0.735],[0.4575,0.7575],[0.375,0.735],[0.2675,0.5775],[0.2325,0.455]] , img: 'images/9.png'  },
+  // 愛玉與石虎共用同一張圖、同一個等級；介紹頁各自一頁（石虎放在 extras 裡）。請把「請填寫」換成正式文案。
+  { name: '愛玉', feature: `愛玉是臺灣特色天然食品，利用愛玉籽搓洗後形成天然凝膠，可製作清爽的愛玉凍。`, story: `山水裡天然愛玉由在地家族世代傳承，從早期愛玉籽交易到平地栽培研究，讓愛玉成為水里的特色產業。`,
+    extras: [ { name: '石虎', feature: `石虎是臺灣珍貴的野生貓科動物，棲息環境與森林、草地及農田密切相關，是生態保育的重要象徵。`, story: `透過友善石虎農作，鼓勵農民減少使用毒鼠藥及可能傷害野生動物的方式，守護石虎棲地，讓農業與生態共同發展。` } ],
+    r: 70,  color: '#2a9d8f', hull: [[0.1875,0.2975],[0.2225,0.2675],[0.525,0.245],[0.675,0.3],[0.78,0.405],[0.8075,0.4875],[0.8075,0.5775],[0.78,0.665],[0.7325,0.7],[0.59,0.7375],[0.33,0.7725],[0.255,0.7625],[0.2325,0.745],[0.1875,0.4525]], img: 'images/10.png' },
+  { name: '城鄉尋味號', feature: `以鐵道為媒介，串聯地方農產、飲食、工藝、生態與文化，讓旅客透過旅行認識地方特色。`, story: `透過12個代表物及地方品牌故事，將不同產業與文化串聯起來，讓鐵道旅程成為認識地方、支持在地產業的文化體驗。`, r: 76, color: '#2d6a4f', hull: [[0.135,0.4425],[0.1475,0.4225],[0.265,0.34],[0.5725,0.2175],[0.6325,0.205],[0.73,0.205],[0.8075,0.22],[0.8325,0.24],[0.835,0.5075],[0.8125,0.58],[0.5525,0.7725],[0.4825,0.795],[0.17,0.7975],[0.135,0.765]], img: 'images/11.png' },
+];
+
+// ===== 遊戲框與元素大小 =====
+// ※ 碰撞形狀現在會貼合圖片的實際輪廓，所以元素在遊戲裡「實際佔的空間」會比以前（圓形）大。
+//   如果覺得太擠、很難合成，請先把 SIZE_SCALE 調小（例如 1.3）。
+const BOX_W = 450;            // 遊戲框寬度。框越小，元素相對越大、越容易堆到紅線
+const BOX_H = 600;            // 遊戲框高度
+const SIZE_SCALE = 1.2;         // 所有元素一起放大／縮小的倍率（1.3 = 全部放大 30%）
+
+// ===== 背景：車廂內部 =====
+// 有畫好的車廂圖，就放進 images 資料夾，並把檔名寫在這裡（留空 = 使用內建的簡易車廂示意）
+const BOX_BG_IMAGE  = 'images/bg.jpg';   // 遊戲框裡的背景圖（建議比例 = BOX_W : BOX_H，也就是 3:4；圖片比例不同時會自動置中裁切）
+const PAGE_BG_IMAGE = '';     // 整個網頁的背景圖，例如 'images/page-bg.png'（選填）
+const BG_OVERLAY = 'rgba(34,34,34,0.4)';   // 蓋在遊戲框背景圖上的黑灰色調色層（0.4 = 透明度 40%，數字愈大背景愈暗、愈不搶眼；0 = 不蓋）
+const INTERIOR = {            // 內建車廂示意的顏色（有放 BOX_BG_IMAGE 時不會用到）
+  wall: '#efe3c8', ceiling: '#c9b48a', frame: '#8a6a45', sky1: '#bfe5f5', sky2: '#eaf7ff',
+  hill1: '#8fc46a', hill2: '#6fae52', panel: '#d9c39a', rail: '#a07a4c', seat: '#4f8f64', seatLine: '#3e7552', floor: '#7a6046',
+};
+
+// ===== 碰撞形狀（貼合圖片）=====
+const USE_HULL = true;        // true = 碰撞形狀貼合圖片輪廓；false = 回到圓形
+const HULL_ALPHA = 40;        // 透明度高於這個數字（0~255）的像素才算「圖案」
+const HULL_MAX_VERTS = 14;    // 碰撞多邊形最多幾個角（愈多愈貼合，但愈吃效能）
+const HULL_SCALE = 1.0;       // 碰撞形狀相對圖片的大小（0.95 = 稍微內縮一點，視覺上比較不卡）
+
+// ===== 測試用：在網址最後面加上這些就會啟動 =====
+const TEST_MODE = location.search.includes('test');    // ?test  → 會掉大顆的元素，方便測試過關
+const DEBUG = location.search.includes('debug');       // ?debug → 畫出每顆元素真正的碰撞形狀（紅線）
+
+// ===== 手感 =====
+const MAX_DROP_LEVEL = TEST_MODE ? FRUITS.length - 2 : 3;     // 一開始會掉落的最大等級（0 = 最小的那種）
+const GRAVITY = 1;            // 重力：越大掉越快
+const BOUNCE = 0.3;           // 彈性：0 不彈，1 很彈（太大容易亂彈、疊在一起）
+const FRICTION = 0.1;         // 摩擦力（太大容易卡在半空中）
+const DROP_COOLDOWN = 600;    // 兩次投放之間的等待時間（毫秒）
+const IMG_SCALE = 1.5;        // 圖片大小 = 2 × 大小(r) × 這個數字（碰撞形狀會跟著圖片一起放大縮小）
+const DEADLINE_Y = BOX_H * 0.2;   // 紅線高度（0.5 = 框的正中間；0.2 = 靠近頂部）。元素堆過這條線就會輸
+const OVER_DELAY = 1500;      // 超過紅線多久後判定輸（毫秒）
+const WIN_DELAY = 600;        // 合成出最後一級後，等多久才跳出勝利畫面（毫秒）
+
+// ===== 合併特效 =====
+const MERGE_EFFECTS = true;   // false = 關閉所有合併特效
+const POP_MS = 260;           // 新元素「彈出」變大的動畫時間（毫秒）
+const GHOST_MS = 160;         // 兩顆舊元素滑向中間並淡出的時間（毫秒）
+const FX_TEXT_COLOR = '#5a3b1e';   // 合併時浮起的「+分數」文字顏色
+
+// ===== 其他顏色 =====
+const DEADLINE_COLOR = 'rgba(250,244,228,0.85)';   // 紅線顏色
+const GUIDE_COLOR = 'rgba(255,255,255,0.3)';         // 投放位置的導引線顏色
+
+/* ===================================================== */
+
+const { Engine, World, Bodies, Body, Events } = Matter;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const mainCtx = ctx;
+const nctx = document.getElementById('nextCanvas').getContext('2d');
+canvas.width = BOX_W;
+canvas.height = BOX_H;
+const W = BOX_W, H = BOX_H;
+const $ = id => document.getElementById(id);
+const fill = (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+const VARS = { top: REWARD_TOP_N, oa: LINE_OA_NAME, final: FRUITS[FRUITS.length - 1].name };
+
+// ===== 套用文案 =====
+document.title = TEXT.title;
+$('tScore').textContent = TEXT.score;
+$('tBest').textContent = TEXT.best;
+$('tNext').textContent = TEXT.next;
+$('startTitle').textContent = TEXT.startTitle;
+if (TEXT.startSub) { $('startSub').textContent = TEXT.startSub; $('startSub').classList.remove('hidden'); }
+$('introHeading').textContent = TEXT.introHeading; if (!TEXT.introHeading) $('introHeading').classList.add('hidden');
+$('startIntro').textContent = TEXT.startIntro;
+$('howTitle').textContent = TEXT.howTitle;
+TEXT.howTo.forEach(t => { const li = document.createElement('li'); li.textContent = fill(t, VARS); $('howList').appendChild(li); });
+$('rewardTitle').textContent = TEXT.rewardTitle;
+$('startReward').textContent = fill(TEXT.startReward, VARS);
+if (RANK_DEADLINE) { $('startDeadline').textContent = fill(TEXT.deadline, { deadline: RANK_DEADLINE }); $('startDeadline').classList.remove('hidden'); }
+$('nickLabel').textContent = TEXT.nickLabel;
+$('nickInput').placeholder = TEXT.nickPlaceholder;
+$('btnStart').textContent = TEXT.loading;
+$('btnStartShare').textContent = TEXT.shareGame;
+$('cardTitle').textContent = TEXT.cardTitle;
+$('cardNote').textContent = fill(TEXT.cardNote, VARS);
+if (RANK_DEADLINE) { $('cardDeadline').textContent = fill(TEXT.deadline, { deadline: RANK_DEADLINE }); $('cardDeadline').classList.remove('hidden'); }
+$('btnLine').textContent = fill(TEXT.lineBtn, VARS);
+$('btnShare').textContent = TEXT.shareBtn;
+$('btnRank').textContent = TEXT.rankBtn;
+$('btnIntro').textContent = TEXT.intro;
+$('btnFeedback').textContent = TEXT.feedback;
+$('btnRank').classList.toggle('hidden', !SHOW_RANK_BTN);
+$('btnFeedback').classList.toggle('hidden', !SHOW_FEEDBACK_BTN);
+$('extraRow').classList.toggle('hidden', !(SHOW_RANK_BTN || SHOW_FEEDBACK_BTN));
+$('shareTitle').textContent = TEXT.shareTitle;
+$('btnSave').textContent = TEXT.saveBtn;
+$('saveHint').textContent = fill(TEXT.saveHint, VARS);
+$('shareFriendTitle').textContent = TEXT.shareFriendTitle;
+$('btnShIG').textContent = TEXT.shIG;
+$('btnShThreads').textContent = TEXT.shThreads;
+$('btnShFB').textContent = TEXT.shFB;
+$('btnShLine').textContent = TEXT.shLINE;
+$('btnShCopy').textContent = TEXT.shCopy;
+$('btnShareBack').textContent = TEXT.back;
+$('rankTitle').textContent = fill(TEXT.rankTitle, VARS);
+$('rankNote').textContent = fill(TEXT.rankNote, VARS);
+$('btnRankBack').textContent = TEXT.back;
+$('introTitle').textContent = TEXT.introTitle;
+$('btnBack').textContent = TEXT.back;
+$('btnDetailBack').textContent = TEXT.backToList;
+$('tabFeature').textContent = TEXT.tabFeature;
+$('tabStory').textContent = TEXT.tabStory;
+if (PAGE_BG_IMAGE) document.body.style.backgroundImage = 'url("' + PAGE_BG_IMAGE + '")';
+
+// ===== 物理世界 =====
+const engine = Engine.create();
+engine.gravity.y = GRAVITY;
+engine.positionIterations = 12;   // 數值越大，元素越不容易疊在一起
+engine.velocityIterations = 10;
+
+const T = 60;
+World.add(engine.world, [
+  Bodies.rectangle(W / 2, H + T / 2, W + 2 * T, T, { isStatic: true, friction: 0.1, frictionStatic: 0 }),
+  Bodies.rectangle(-T / 2, H / 2, T, H * 3, { isStatic: true, friction: 0, frictionStatic: 0 }),
+  Bodies.rectangle(W + T / 2, H / 2, T, H * 3, { isStatic: true, friction: 0, frictionStatic: 0 }),
+]);
+
+// ===== 圖片、碰撞形狀 =====
+FRUITS.forEach(f => { f.r = f.r * SIZE_SCALE; });
+
+// 找出圖片的凸包（外輪廓）。回傳 0~1 的比例座標；失敗（例如直接點開檔案時瀏覽器不讓讀像素）就回傳 null
+function computeHull(img) {
+  try {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const s = Math.min(1, 160 / Math.max(iw, ih));
+    const cw = Math.max(1, Math.round(iw * s)), ch = Math.max(1, Math.round(ih * s));
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0, cw, ch);
+    const d = g.getImageData(0, 0, cw, ch).data;
+    const pts = [];
+    for (let y = 0; y < ch; y++) {
+      let lo = -1, hi = -1;
+      for (let x = 0; x < cw; x++) {
+        if (d[(y * cw + x) * 4 + 3] > HULL_ALPHA) { if (lo < 0) lo = x; hi = x; }
+      }
+      if (lo >= 0) pts.push([lo, y], [hi + 1, y], [lo, y + 1], [hi + 1, y + 1]);
+    }
+    if (pts.length < 3) return null;
+    let hull = convexHull(pts);
+    hull = simplifyHull(hull, HULL_MAX_VERTS);
+    if (hull.length < 3) return null;
+    return hull.map(p => [p[0] / cw, p[1] / ch]);
+  } catch (e) {
+    return null;
+  }
+}
+function convexHull(points) {
+  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const q of p) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop(); lower.push(q); }
+  const upper = [];
+  for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop(); upper.push(q); }
+  upper.pop(); lower.pop();
+  return lower.concat(upper);
+}
+// 角太多時，一次拿掉「對外形影響最小」的角，直到剩下 max 個
+function simplifyHull(h, max) {
+  h = h.slice();
+  while (h.length > max) {
+    let best = -1, bestArea = Infinity;
+    for (let i = 0; i < h.length; i++) {
+      const a = h[(i + h.length - 1) % h.length], b = h[i], c = h[(i + 1) % h.length];
+      const area = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
+      if (area < bestArea) { bestArea = area; best = i; }
+    }
+    h.splice(best, 1);
+  }
+  return h;
+}
+function polygonCentroid(v) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < v.length; i++) {
+    const p = v[i], q = v[(i + 1) % v.length];
+    const cr = p[0] * q[1] - q[0] * p[1];
+    a += cr; cx += (p[0] + q[0]) * cr; cy += (p[1] + q[1]) * cr;
+  }
+  if (Math.abs(a) < 1e-6) return [v[0][0], v[0][1]];
+  return [cx / (3 * a), cy / (3 * a)];
+}
+function setCircleShape(f) {
+  f.shape = null; f.cx = 0; f.cy = 0;
+  f.minX = -f.r; f.maxX = f.r; f.minY = -f.r; f.maxY = f.r;
+}
+// 圖片載入後：算出繪圖大小、碰撞形狀（相對於重心）、左右上下的範圍
+function prepareFruit(f) {
+  setCircleShape(f);
+  if (!f.loaded) return;
+  const iw = f.image.naturalWidth, ih = f.image.naturalHeight;
+  f.k = (f.r * 2 * (f.imgScale || IMG_SCALE)) / Math.max(iw, ih);
+  f.dw = iw * f.k; f.dh = ih * f.k;
+  if (!USE_HULL) return;
+  const hn = f.hull || computeHull(f.image);
+  if (!hn) return;
+  let v = hn.map(p => [(p[0] - 0.5) * f.dw * HULL_SCALE, (p[1] - 0.5) * f.dh * HULL_SCALE]);
+  const c = polygonCentroid(v);
+  f.cx = c[0]; f.cy = c[1];
+  f.shape = v.map(p => [p[0] - c[0], p[1] - c[1]]);
+  f.minX = Math.min(...f.shape.map(p => p[0])); f.maxX = Math.max(...f.shape.map(p => p[0]));
+  f.minY = Math.min(...f.shape.map(p => p[1])); f.maxY = Math.max(...f.shape.map(p => p[1]));
+}
+function loadImage(src) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+}
+
+// ===== 背景（車廂內部）=====
+let bgCanvas = null;
+function rrect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function buildInterior() {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), I = INTERIOR;
+  g.fillStyle = I.wall; g.fillRect(0, 0, W, H);
+  g.fillStyle = I.ceiling; g.fillRect(0, 0, W, H * 0.035);
+  const n = 3, gap = W * 0.04, ww = (W - gap * (n + 1)) / n, wy = H * 0.07, wh = H * 0.27;
+  for (let i = 0; i < n; i++) {
+    const x = gap + i * (ww + gap);
+    g.fillStyle = I.frame; rrect(g, x - 6, wy - 6, ww + 12, wh + 12, 14); g.fill();
+    g.save(); rrect(g, x, wy, ww, wh, 10); g.clip();
+    const sky = g.createLinearGradient(0, wy, 0, wy + wh); sky.addColorStop(0, I.sky1); sky.addColorStop(1, I.sky2);
+    g.fillStyle = sky; g.fillRect(x, wy, ww, wh);
+    g.fillStyle = I.hill1; g.beginPath(); g.ellipse(x + ww * 0.25, wy + wh * 1.0, ww * 0.6, wh * 0.38, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = I.hill2; g.beginPath(); g.ellipse(x + ww * 0.8, wy + wh * 1.05, ww * 0.7, wh * 0.34, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+    g.fillStyle = I.frame; g.fillRect(x + ww / 2 - 2, wy, 4, wh);
+  }
+  g.fillStyle = I.panel; g.fillRect(0, H * 0.42, W, H * 0.5);
+  g.fillStyle = I.rail; g.fillRect(0, H * 0.42, W, 6);
+  g.fillStyle = I.seat; g.fillRect(0, H * 0.82, W, H * 0.12);
+  g.strokeStyle = I.seatLine; g.lineWidth = 3;
+  for (let x = W / 6; x < W; x += W / 3) { g.beginPath(); g.moveTo(x, H * 0.82); g.lineTo(x, H * 0.94); g.stroke(); }
+  g.fillStyle = I.floor; g.fillRect(0, H * 0.94, W, H * 0.06);
+  return c;
+}
+function buildImageBg(img) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+  g.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  if (BG_OVERLAY) { g.fillStyle = BG_OVERLAY; g.fillRect(0, 0, W, H); }
+  return c;
+}
+
+// ===== 遊戲狀態 =====
+let score = 0, best = 0, gameOver = false;
+let paused = true;    // 開始頁、結束頁、介紹頁等跳出時，遊戲暫停
+let started = false;
+let won = false;      // 這一局是否已經過關過
+let endMode = null;   // 'over' 或 'win'
+let runId = 0;
+let nick = '';
+try { best = Number(localStorage.getItem('best') || 0); nick = localStorage.getItem('nick') || ''; } catch (e) {}
+$('best').textContent = best;
+$('nickInput').value = nick;
+
+let currentLevel = randLevel();
+let nextLevel = randLevel();
+let pointerX = W / 2;
+let canDrop = true;
+let overSince = null;
+
+let fx = [];
+let ghosts = [];
+
+function randLevel() { return Math.floor(Math.random() * (MAX_DROP_LEVEL + 1)); }
+function clampX(f, x) { return Math.max(-f.minX, Math.min(W - f.maxX, x)); }
+function dropY(f) { return Math.max(40, -f.minY + 6); }
+
+function makeFruit(level, x, y, pop) {
+  const f = FRUITS[level];
+  const opts = { restitution: BOUNCE, friction: FRICTION, frictionStatic: 0 };
+  let body = null;
+  if (f.shape) {
+    try {
+      body = Bodies.fromVertices(x, y, [f.shape.map(p => ({ x: p[0], y: p[1] }))], opts);
+      Body.setPosition(body, { x, y });   // 讓「重心」落在指定位置
+    } catch (e) { body = null; setCircleShape(f); }
+  }
+  if (!body) body = Bodies.circle(x, y, f.r, opts, 40);
+  body.level = level;
+  body.bornAt = performance.now();
+  if (pop && MERGE_EFFECTS) body.popAt = performance.now();
+  World.add(engine.world, body);
+  return body;
+}
+
+function addScore(n) {
+  score += n;
+  $('score').textContent = score;
+  if (score > best) {
+    best = score;
+    $('best').textContent = best;
+    try { localStorage.setItem('best', best); } catch (e) {}
+  }
+}
+
+// ===== 合併 =====
+// 兩顆同等級的元素只要接觸（開始碰到，或持續碰著）就合併
+let mergePairs = [];
+function collectPairs(ev) {
+  for (const p of ev.pairs) {
+    const a = p.bodyA, b = p.bodyB;
+    if (a.isStatic || b.isStatic) continue;
+    if (a.level === undefined || a.level !== b.level) continue;
+    if (a.level >= FRUITS.length - 1) continue;   // 最大的不再合併
+    mergePairs.push([a, b]);
+  }
+}
+Events.on(engine, 'collisionStart', collectPairs);
+Events.on(engine, 'collisionActive', collectPairs);
+
+function tryMerge() {
+  const list = mergePairs;
+  mergePairs = [];
+  for (const [a, b] of list) {
+    if (a.dead || b.dead) continue;
+    mergePair(a, b);
+  }
+}
+
+function mergePair(a, b) {
+  const now = performance.now();
+  a.dead = b.dead = true;
+  const x = (a.position.x + b.position.x) / 2;
+  const y = (a.position.y + b.position.y) / 2;
+  const level = a.level + 1;
+  const vx = (a.velocity.x + b.velocity.x) / 2;
+  const vy = (a.velocity.y + b.velocity.y) / 2;
+
+  if (MERGE_EFFECTS) {
+    [a, b].forEach(o => ghosts.push({
+      level: a.level, x0: o.position.x, y0: o.position.y, x1: x, y1: y, angle: o.angle, start: now
+    }));
+  }
+
+  World.remove(engine.world, [a, b]);
+  const nb = makeFruit(level, x, y, true);
+  Body.setVelocity(nb, { x: vx, y: vy });
+
+  const points = level * 2;
+  addScore(points);
+  spawnMergeFx(x, y, level, points, level === FRUITS.length - 1);
+
+  // 合成出最後一級 → 過關
+  if (level === FRUITS.length - 1 && !won) {
+    won = true;
+    saveRecord(true);
+    setTimeout(() => { if (!gameOver) showEnd('win'); }, WIN_DELAY);
+  }
+}
+
+function spawnMergeFx(x, y, level, points, big) {
+  if (!MERGE_EFFECTS) return;
+  const f = FRUITS[level];
+  const now = performance.now();
+  const rr = Math.max(f.maxX - f.minX, f.maxY - f.minY) / 2;
+  fx.push({ type: 'ring', x, y, r: rr, color: f.color, start: now, dur: 380 });
+  const n = big ? 26 : 10;
+  for (let i = 0; i < n; i++) {
+    const ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+    const sp = 60 + Math.random() * 90;
+    fx.push({ type: 'dot', x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+              size: 3 + Math.random() * 3, color: f.color, start: now, dur: 500 });
+  }
+  fx.push({ type: 'text', x, y: y - rr * 0.6, text: '+' + points, start: now, dur: 700 });
+}
+
+// ===== 紀錄、排行榜（存在玩家自己的瀏覽器）=====
+function loadRecords() {
+  try { const r = JSON.parse(localStorage.getItem('records') || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; }
+}
+function storeRecords(r) { try { localStorage.setItem('records', JSON.stringify(r.slice(0, 200))); } catch (e) {} }
+function getNick() {
+  const v = ($('nickInput').value || '').trim();
+  return v || TEXT.nickDefault;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate());
+}
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+function makeCode(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  return h.toString(36).toUpperCase().padStart(6, '0').slice(-6);
+}
+let lastRec = null;
+function saveRecord(win) {
+  if (!runId) return;
+  const recs = loadRecords();
+  const i = recs.findIndex(r => r.id === runId);
+  const rec = { id: runId, nick: getNick(), score, time: Date.now(), win: !!(win || (i >= 0 && recs[i].win)) };
+  if (i >= 0) recs[i] = rec; else recs.push(rec);
+  recs.sort((a, b) => b.score - a.score || a.time - b.time);
+  storeRecords(recs);
+  lastRec = rec;
+}
+function rankOf(rec) {
+  const recs = loadRecords();
+  const i = recs.findIndex(r => r.id === rec.id);
+  return { rank: i + 1, total: recs.length };
+}
+
+// ===== 畫面切換 =====
+const overlay = $('overlay');
+const panel = $('panel');
+const VIEWS = { start: $('viewStart'), end: $('viewEnd'), share: $('viewShare'), rank: $('viewRank'), intro: $('viewIntro'), detail: $('viewDetail') };
+let currentView = 'start';
+let introBack = 'end';
+let shareBack = 'start';
+function showView(name) {
+  currentView = name;
+  for (const k in VIEWS) VIEWS[k].classList.toggle('hidden', k !== name);
+  overlay.classList.add('show');
+  panel.scrollTop = 0;
+}
+function hideOverlay() {
+  overlay.classList.remove('show');
+  paused = false;
+  overSince = null;
+}
+
+// 開始
+$('btnStart').addEventListener('click', () => {
+  if (!ready) return;
+  try { localStorage.setItem('nick', $('nickInput').value.trim()); } catch (e) {}
+  if (!started) { started = true; runId = Date.now(); }
+  hideOverlay();
+});
+
+// 結束 / 勝利
+function renderCard() {
+  const rec = lastRec || { nick: getNick(), score, time: Date.now(), id: runId };
+  $('cardNick').textContent = rec.nick;
+  $('cardScore').textContent = rec.score + ' ' + TEXT.rankPts;
+  $('cardTime').textContent = fmtDate(rec.time);
+  $('cardCode').textContent = TEXT.cardCode + makeCode(rec.id + '|' + rec.nick + '|' + rec.score + '|' + rec.time);
+  $('cardCode').classList.toggle('hidden', !SHOW_CODE);
+}
+function showEnd(mode) {
+  endMode = mode;
+  paused = true;
+  saveRecord(mode === 'win');
+  $('endTitle').textContent = mode === 'win' ? TEXT.win : TEXT.gameOver;
+  $('btnMain').textContent = mode === 'win' ? TEXT.keepPlaying : TEXT.again;
+  renderCard();
+  showView('end');
+}
+$('btnMain').addEventListener('click', () => {
+  if (endMode === 'over') { restart(); }
+  hideOverlay();
+});
+$('btnLine').addEventListener('click', openLine);
+$('btnShare').addEventListener('click', () => { shareBack = 'end'; openShare(true); });
+$('btnRank').addEventListener('click', () => { renderRank(); showView('rank'); });
+$('btnIntro').addEventListener('click', () => { introBack = 'end'; showView('intro'); });
+$('btnFeedback').addEventListener('click', () => {
+  if (!FEEDBACK_URL) { alert(TEXT.noFeedbackLink); return; }
+  window.open(FEEDBACK_URL, '_blank');
+});
+
+// 開始頁的分享按鈕
+$('btnStartShare').addEventListener('click', () => { shareBack = 'start'; openShare(false); });
+
+// 介紹頁、排行榜、分享頁的返回
+$('btnBack').addEventListener('click', () => showView(introBack));
+$('btnDetailBack').addEventListener('click', () => showView('intro'));
+$('btnRankBack').addEventListener('click', () => showView('end'));
+$('btnShareBack').addEventListener('click', () => showView(shareBack));
+
+function openLine() {
+  if (!LINE_OA_URL) { alert(TEXT.noLineLink); return; }
+  window.open(LINE_OA_URL, '_blank');
+}
+
+// 排行榜（本機）
+function renderRank() {
+  const box = $('rankList');
+  box.innerHTML = '';
+  const recs = loadRecords().slice(0, REWARD_TOP_N);
+  if (!recs.length) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = TEXT.rankEmpty; box.appendChild(d); return; }
+  recs.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'rank-row' + (lastRec && r.id === lastRec.id ? ' me' : '');
+    const a = document.createElement('div'); a.textContent = i + 1;
+    const b = document.createElement('div');
+    b.textContent = r.nick;
+    const t = document.createElement('div'); t.className = 't'; t.textContent = fmtDate(r.time);
+    b.appendChild(t);
+    const c = document.createElement('div'); c.textContent = r.score + ' ' + TEXT.rankPts;
+    row.appendChild(a); row.appendChild(b); row.appendChild(c);
+    box.appendChild(row);
+  });
+}
+
+// ===== 分享 =====
+function isPublicUrl() {
+  if (SHARE_URL) return true;
+  return /^https?:$/.test(location.protocol) && !/^(localhost|127\.|192\.168\.|10\.)/.test(location.hostname);
+}
+function gameUrl() {
+  if (SHARE_URL) return SHARE_URL;
+  return location.href.split('#')[0].split('?')[0];
+}
+function shareMessage(withScore) {
+  return withScore ? fill(TEXT.shareText, { score }) : TEXT.shareTextNoScore;
+}
+let shareWithScore = false;
+function openShare(withScore) {
+  shareWithScore = withScore;
+  $('shareSaveBox').classList.toggle('hidden', !withScore);
+  showView('share');
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function copyText(t, msg) {
+  const ok = () => toast(msg);
+  const fallback = () => { prompt(TEXT.copyFail, t); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fallback);
+  else fallback();
+}
+function payload() {
+  const text = shareMessage(shareWithScore), url = gameUrl();
+  return { text, url, both: text + '\n' + url };
+}
+const enc = encodeURIComponent;
+$('btnShFB').addEventListener('click', () => {
+  if (!isPublicUrl()) { alert('Facebook 只能分享「已上線的網址」，目前是在自己的電腦上開啟，所以會出錯。遊戲放到網站上之後就能正常使用。'); return; }
+  window.open('https://www.facebook.com/sharer/sharer.php?u=' + enc(payload().url), '_blank');
+});
+$('btnShThreads').addEventListener('click', () => {
+  const p = payload();
+  window.open('https://www.threads.com/intent/post?text=' + enc(p.text) + '&url=' + enc(p.url), '_blank');
+});
+$('btnShLine').addEventListener('click', () => {
+  window.open('https://line.me/R/msg/text/?' + enc(payload().both), '_blank');
+});
+// Instagram 沒有「帶入內容」的分享網址，所以：先複製連結，再開啟 Instagram，由玩家自己貼上
+$('btnShIG').addEventListener('click', () => {
+  copyText(payload().both, TEXT.igHint);
+  window.open('https://www.instagram.com/', '_blank');
+});
+$('btnShCopy').addEventListener('click', () => copyText(payload().both, TEXT.copied));
+
+// 把成績卡畫成圖片（用來儲存）
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function wrapLines(g, text, maxW) {
+  const lines = []; let cur = '';
+  // 英文、數字、@ 連在一起的字（例如 LINE@）當成一個整體，不會被從中間切開
+  for (const tok of (text.match(/[A-Za-z0-9@]+|[\s\S]/g) || [])) {
+    if (tok === '\n') { lines.push(cur); cur = ''; continue; }
+    // 標點不放在行首（寧可這一行稍微超出一點）
+    if (g.measureText(cur + tok).width > maxW && !'。，、！？：；）」』'.includes(tok)) { lines.push(cur); cur = tok; } else cur += tok;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function makeCardBlob() {
+  return new Promise((resolve, reject) => {
+    try {
+      const cw = 720, chh = 820;
+      const c = document.createElement('canvas'); c.width = cw; c.height = chh;
+      const g = c.getContext('2d');
+      g.fillStyle = cssVar('--panel-bg') || '#d5e383'; g.fillRect(0, 0, cw, chh);
+      g.fillStyle = cssVar('--card-bg') || '#f0f9b4';
+      rrect(g, 30, 30, cw - 60, chh - 60, 28); g.fill();
+      g.lineWidth = 6; g.strokeStyle = cssVar('--card-border') || '#52841F'; g.stroke();
+      const rec = lastRec || { nick: getNick(), score, time: Date.now(), id: runId };
+      g.fillStyle = cssVar('--card-text') || '#3b5a14'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+      g.font = 'bold 36px sans-serif'; g.fillText(TEXT.cardTitle, cw / 2, 120);
+      g.font = '40px sans-serif'; g.fillText(rec.nick, cw / 2, 215);                       // 暱稱：置中，不加其他字
+      g.font = 'bold 150px sans-serif'; g.fillText(String(rec.score), cw / 2, 385);       // 分數 > 暱稱
+      g.font = '36px sans-serif'; g.fillText(TEXT.rankPts, cw / 2, 440);
+      g.font = '30px sans-serif';
+      let y = 510;
+      g.fillText(fmtDate(rec.time), cw / 2, y); y += 46;
+      if (RANK_DEADLINE) { g.fillText(fill(TEXT.deadline, { deadline: RANK_DEADLINE }), cw / 2, y); y += 46; }
+      if (SHOW_CODE) { g.fillText(TEXT.cardCode + makeCode(rec.id + '|' + rec.nick + '|' + rec.score + '|' + rec.time), cw / 2, y); y += 46; }
+      y += 6;
+      g.strokeStyle = cssVar('--card-border') || '#52841F'; g.lineWidth = 3; g.setLineDash([12, 8]);
+      g.beginPath(); g.moveTo(80, y); g.lineTo(cw - 80, y); g.stroke(); g.setLineDash([]);
+      y += 52; g.font = '28px sans-serif';
+      wrapLines(g, fill(TEXT.cardNote, VARS), cw - 160).forEach(l => { g.fillText(l, cw / 2, y); y += 42; });
+      c.toBlob(b => b ? resolve(b) : reject(new Error('blob')), 'image/png');
+    } catch (e) { reject(e); }
+  });
+}
+$('btnSave').addEventListener('click', async () => {
+  try {
+    const blob = await makeCardBlob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'score.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { alert(TEXT.saveFail); }
+});
+
+// ===== 介紹：列表與詳細頁 =====
+// 介紹頁的項目 = 每個元素各一個，再加上元素底下 extras 裡的額外介紹頁（不會增加等級，也不影響合成）
+const INTRO_ITEMS = [];
+FRUITS.forEach((f, i) => {
+  INTRO_ITEMS.push({ name: f.name, feature: f.feature, story: f.story, img: f.img, color: f.color, station: f.station || '', index: i });
+  (f.extras || []).forEach(e => INTRO_ITEMS.push({
+    name: e.name, feature: e.feature, story: e.story, img: e.img || f.img, color: f.color, station: e.station || f.station || '', index: i
+  }));
+});
+if (STATIONS.length) {
+  const order = s => { const k = STATIONS.indexOf(s); return k < 0 ? STATIONS.length : k; };
+  INTRO_ITEMS.forEach((it, n) => { it.n = n; });
+  INTRO_ITEMS.sort((a, b) => order(a.station) - order(b.station) || a.n - b.n);
+}
+
+function makeThumb(f, i, big) {
+  const thumb = document.createElement('div');
+  thumb.className = 'thumb' + (big ? ' big' : '');
+  thumb.style.background = f.color;
+  thumb.textContent = i + 1;
+  const img = new Image();
+  img.onload = () => { thumb.textContent = ''; thumb.style.background = 'none'; thumb.appendChild(img); };
+  img.src = f.img;
+  return thumb;
+}
+
+let detailIndex = 0;
+let detailTab = 'feature';
+
+function renderDetailText() {
+  const f = INTRO_ITEMS[detailIndex];
+  $('detailText').textContent = detailTab === 'feature' ? (f.feature || '') : (f.story || '');
+  $('tabFeature').classList.toggle('active', detailTab === 'feature');
+  $('tabStory').classList.toggle('active', detailTab === 'story');
+}
+
+function showDetail(i) {
+  detailIndex = i;
+  detailTab = 'feature';
+  const f = INTRO_ITEMS[i];
+  $('detailName').textContent = f.name;
+  $('detailStation').textContent = f.station ? f.station : '';
+  const head = $('detailThumb');
+  head.innerHTML = '';
+  head.appendChild(makeThumb(f, f.index, true));
+  renderDetailText();
+  showView('detail');
+}
+
+$('tabFeature').addEventListener('click', () => { detailTab = 'feature'; renderDetailText(); });
+$('tabStory').addEventListener('click', () => { detailTab = 'story'; renderDetailText(); });
+
+(function buildIntro() {
+  const list = $('introList');
+  let lastStation = null;
+  INTRO_ITEMS.forEach((f, i) => {
+    if (STATIONS.length && f.station !== lastStation) {
+      lastStation = f.station;
+      const h = document.createElement('div');
+      h.className = 'group-title';
+      h.textContent = f.station || '其他';
+      list.appendChild(h);
+    }
+    const tile = document.createElement('button');
+    tile.className = 'tile';
+    tile.appendChild(makeThumb(f, f.index, false));
+    if (!STATIONS.length && f.station) {
+      const st = document.createElement('span'); st.className = 'st'; st.textContent = f.station;
+      tile.appendChild(st);
+    }
+    const label = document.createElement('span');
+    label.textContent = f.name;
+    tile.appendChild(label);
+    tile.addEventListener('click', () => showDetail(i));
+    list.appendChild(tile);
+  });
+})();
+
+// ===== 操作：滑鼠 / 手指移動，放開（或點一下）投放 =====
+function setPointer(e) {
+  const rect = canvas.getBoundingClientRect();
+  pointerX = (e.clientX - rect.left) * W / rect.width;
+}
+canvas.addEventListener('pointermove', setPointer);
+canvas.addEventListener('pointerdown', setPointer);
+canvas.addEventListener('pointerup', e => {
+  setPointer(e);
+  if (gameOver || paused || !canDrop) return;
+  const f = FRUITS[currentLevel];
+  makeFruit(currentLevel, clampX(f, pointerX), dropY(f), false);
+  currentLevel = nextLevel;
+  nextLevel = randLevel();
+  canDrop = false;
+  setTimeout(() => { canDrop = true; }, DROP_COOLDOWN);
+});
+
+function restart() {
+  engine.world.bodies.filter(b => !b.isStatic).forEach(b => World.remove(engine.world, b));
+  score = 0;
+  $('score').textContent = 0;
+  gameOver = false;
+  won = false;
+  overSince = null;
+  fx = [];
+  ghosts = [];
+  mergePairs = [];
+  lastRec = null;
+  runId = Date.now();
+  currentLevel = randLevel();
+  nextLevel = randLevel();
+}
+
+function checkGameOver() {
+  const now = performance.now();
+  const over = engine.world.bodies.some(b =>
+    !b.isStatic && b.level !== undefined && now - b.bornAt > 1000 && b.bounds.min.y < DEADLINE_Y);
+  if (over) {
+    if (overSince === null) overSince = now;
+    if (now - overSince > OVER_DELAY) {
+      gameOver = true;
+      showEnd('over');
+    }
+  } else {
+    overSince = null;
+  }
+}
+
+// ===== 繪圖 =====
+function drawFruit(level, x, y, angle, alpha, target, scale) {
+  const ctx = target || mainCtx;
+  const f = FRUITS[level];
+  ctx.save();
+  ctx.globalAlpha = alpha || 1;
+  ctx.translate(x, y);
+  ctx.rotate(angle || 0);
+  if (scale && scale !== 1) ctx.scale(scale, scale);
+  if (f.loaded) {
+    ctx.drawImage(f.image, -f.cx - f.dw / 2, -f.cy - f.dh / 2, f.dw, f.dh);
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, 0, f.r, 0, Math.PI * 2);
+    ctx.fillStyle = f.color;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(f.r * 0.45, 0, f.r * 0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.font = 'bold ' + Math.max(12, f.r * 0.6) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(level + 1, 0, 0);
+  }
+  ctx.restore();
+}
+
+function popScale(b, now) {
+  if (!b.popAt) return 1;
+  const t = (now - b.popAt) / POP_MS;
+  if (t >= 1) return 1;
+  const c1 = 1.70158, c3 = c1 + 1;
+  const e = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  return 0.6 + 0.4 * e;
+}
+
+function drawGhosts(now) {
+  ghosts = ghosts.filter(g => now - g.start < GHOST_MS);
+  ghosts.forEach(g => {
+    const t = (now - g.start) / GHOST_MS;
+    const x = g.x0 + (g.x1 - g.x0) * t;
+    const y = g.y0 + (g.y1 - g.y0) * t;
+    drawFruit(g.level, x, y, g.angle, 1 - t, null, 1 - 0.25 * t);
+  });
+}
+
+function drawEffects(now) {
+  fx = fx.filter(e => now - e.start < e.dur);
+  fx.forEach(e => {
+    const t = (now - e.start) / e.dur;
+    const sec = (now - e.start) / 1000;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - t);
+    if (e.type === 'ring') {
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r * (0.9 + 0.8 * t), 0, Math.PI * 2);
+      ctx.lineWidth = 1 + 5 * (1 - t);
+      ctx.strokeStyle = e.color;
+      ctx.stroke();
+    } else if (e.type === 'dot') {
+      ctx.beginPath();
+      ctx.arc(e.x + e.vx * sec, e.y + e.vy * sec + 120 * sec * sec, e.size * (1 - 0.5 * t), 0, Math.PI * 2);
+      ctx.fillStyle = e.color;
+      ctx.fill();
+    } else if (e.type === 'text') {
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeText(e.text, e.x, e.y - 34 * t);
+      ctx.fillStyle = FX_TEXT_COLOR;
+      ctx.fillText(e.text, e.x, e.y - 34 * t);
+    }
+    ctx.restore();
+  });
+}
+
+function draw() {
+  const now = performance.now();
+  ctx.clearRect(0, 0, W, H);
+  if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0);
+
+  // 紅線
+  ctx.strokeStyle = DEADLINE_COLOR;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(W, DEADLINE_Y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  drawGhosts(now);
+
+  engine.world.bodies.forEach(b => {
+    if (b.isStatic || b.level === undefined) return;
+    drawFruit(b.level, b.position.x, b.position.y, b.angle, 1, null, popScale(b, now));
+    if (DEBUG) {   // 除錯：畫出真正的碰撞形狀
+      ctx.save();
+      ctx.beginPath();
+      b.vertices.forEach((v, i) => i ? ctx.lineTo(v.x, v.y) : ctx.moveTo(v.x, v.y));
+      ctx.closePath();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255,0,0,0.9)';
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  drawEffects(now);
+
+  // 準備投放的元素與導引線
+  if (!gameOver && started) {
+    const f = FRUITS[currentLevel];
+    const x = clampX(f, pointerX);
+    ctx.strokeStyle = GUIDE_COLOR;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, dropY(f)); ctx.lineTo(x, H); ctx.stroke();
+    if (canDrop) drawFruit(currentLevel, x, dropY(f), 0, 0.9);
+  }
+}
+
+// 右上角的「下一個」預覽
+function drawNext() {
+  nctx.clearRect(0, 0, 80, 80);
+  if (!started) return;
+  const f = FRUITS[nextLevel];
+  const ext = Math.max(f.maxX - f.minX, f.maxY - f.minY) / 2;
+  const s = Math.min(1, 34 / ext);
+  nctx.save();
+  nctx.scale(s, s);
+  drawFruit(nextLevel, 40 / s - (f.minX + f.maxX) / 2, 40 / s - (f.minY + f.maxY) / 2, 0, 1, nctx);
+  nctx.restore();
+}
+
+// 依照目前的螢幕大小，自動縮放遊戲框（電腦、手機都適用，長寬比不變）
+function fitToScreen() {
+  const hud = $('hud');
+  const availH = window.innerHeight - hud.offsetHeight - 30;
+  const availW = window.innerWidth * 0.96 - 6;
+  const w = Math.max(120, Math.min(availW, availH * BOX_W / BOX_H));
+  canvas.style.width = w + 'px';
+  hud.style.width = (w + 6) + 'px';
+}
+window.addEventListener('resize', fitToScreen);
+window.addEventListener('load', fitToScreen);
+fitToScreen();
+
+// ===== 主迴圈：用固定的時間步長更新物理，不論螢幕是 60Hz 還是 144Hz，遊戲速度都一樣 =====
+const STEP = 1000 / 120;
+let lastTime = performance.now();
+let acc = 0;
+
+function loop(now) {
+  now = now || performance.now();
+  const dt = Math.min(now - lastTime, 100);
+  lastTime = now;
+  if (!gameOver && !paused) {
+    acc += dt;
+    while (acc >= STEP) {
+      Engine.update(engine, STEP);
+      acc -= STEP;
+    }
+    tryMerge();
+    checkGameOver();
+  } else {
+    acc = 0;
+  }
+  draw();
+  drawNext();
+  requestAnimationFrame(loop);
+}
+
+// ===== 啟動：先把圖片全部載好，再開放「開始遊戲」=====
+let ready = false;
+async function boot() {
+  const jobs = FRUITS.map(async f => {
+    const img = await loadImage(f.img);
+    if (img && img.naturalWidth > 0) { f.image = img; f.loaded = true; }
+  });
+  jobs.push((async () => {
+    if (BOX_BG_IMAGE) {
+      const img = await loadImage(BOX_BG_IMAGE);
+      if (img) { bgCanvas = buildImageBg(img); return; }
+    }
+    bgCanvas = buildInterior();
+  })());
+  await Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 8000))]);
+  FRUITS.forEach(prepareFruit);
+  ready = true;
+  $('btnStart').disabled = false;
+  $('btnStart').textContent = TEXT.startBtn;
+}
+showView('start');
+loop();
+boot();
+</script>
+</body>
+</html>
